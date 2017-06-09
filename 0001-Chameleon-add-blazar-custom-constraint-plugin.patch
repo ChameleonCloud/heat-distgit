@@ -1,0 +1,70 @@
+commit b97f26ccebe342e9418b467609500d2629000778
+Author:     Pierre Riteau <priteau@uchicago.edu>
+AuthorDate: Thu Aug 11 12:31:39 2016 +0100
+Commit:     Pierre Riteau <priteau@uchicago.edu>
+CommitDate: Fri Sep 9 15:23:11 2016 +0100
+
+    Add Blazar custom constraint plugin
+
+diff --git a/heat/engine/clients/os/blazar.py b/heat/engine/clients/os/blazar.py
+new file mode 100644
+index 0000000..313382a
+--- /dev/null
++++ b/heat/engine/clients/os/blazar.py
+@@ -0,0 +1,44 @@
++#
++#    Licensed under the Apache License, Version 2.0 (the "License"); you may
++#    not use this file except in compliance with the License. You may obtain
++#    a copy of the License at
++#
++#         http://www.apache.org/licenses/LICENSE-2.0
++#
++#    Unless required by applicable law or agreed to in writing, software
++#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#    License for the specific language governing permissions and limitations
++#    under the License.
++
++from heat.common import exception
++from heat.engine.clients import client_plugin
++from heat.engine import constraints
++
++CLIENT_NAME = 'blazar'
++
++
++class BlazarClientPlugin(client_plugin.ClientPlugin):
++
++    service_types = [RESERVATION] = ['manager']
++
++    def is_not_found(self, ex):
++        return (isinstance(ex, exceptions.HTTPClientError) and
++                ex.status_code == 404)
++
++    def get_reservation_by_ref(self, reservation_ref):
++        try:
++            return reservation_ref
++        except Exception as ex:
++            if self.is_not_found(ex):
++                raise exception.EntityNotFound(
++                    entity="Reservation",
++                    name=reservation_ref)
++            raise
++
++
++class ReservationConstraint(constraints.BaseCustomConstraint):
++    expected_exceptions = (exception.EntityNotFound,)
++
++    def validate_with_client(self, client, reservation):
++        pass
+diff --git a/setup.cfg b/setup.cfg
+index 67ba0b3..b5a152c 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -95,6 +95,7 @@
+ 	cron_expression = heat.engine.constraint.common_constraints:CRONExpressionConstraint
+ 	monasca.notification = heat.engine.clients.os.monasca:MonascaNotificationConstraint
+ 	sahara.plugin = heat.engine.clients.os.sahara:PluginConstraint
++	blazar.reservation = heat.engine.clients.os.blazar:ReservationConstraint
+ heat.stack_lifecycle_plugins = 
+ heat.templates = 
+ 	heat_template_version.2013-05-23 = heat.engine.hot.template:HOTemplate20130523

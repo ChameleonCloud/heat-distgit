@@ -9,7 +9,7 @@ Summary:	OpenStack Orchestration (heat)
 # https://review.openstack.org/#/q/I6a35fa0dda798fad93b804d00a46af80f08d475c,n,z
 Epoch:		1
 Version:	5.0.1
-Release:	1%{?milestone}%{?dist}
+Release:	1.1%{?milestone}%{?dist}
 License:	ASL 2.0
 URL:		http://www.openstack.org
 
@@ -24,6 +24,9 @@ Source3:	openstack-heat-api-cfn.service
 Source4:	openstack-heat-engine.service
 Source5:	openstack-heat-api-cloudwatch.service
 Source20:	heat-dist.conf
+
+Patch0001: 0001-Chameleon-add-blazar-custom-constraint-plugin.patch
+Patch0002: 0002-Added-refs_map-attribute-to-resource-groups.patch
 
 BuildArch: noarch
 BuildRequires: git
@@ -101,6 +104,9 @@ Requires: %{name}-api-cloudwatch = %{epoch}:%{version}-%{release}
 # Remove the requirements file so that pbr hooks don't add it
 # to distutils requires_dist config
 rm -rf {test-,}requirements.txt tools/{pip,test}-requires
+
+%patch0001 -p1
+%patch0002 -p1
 
 # Remove tests in contrib
 find contrib -name tests -type d | xargs rm -r
@@ -411,6 +417,9 @@ AWS CloudWatch-compatible API to the Heat Engine
 
 
 %changelog
+* Fri Jun 09 2017 Pierre Riteau <priteau@uchicago.edu> 1:5.0.1-1.1
+- Add Chameleon patches
+
 * Wed Feb 17 2016 Alan Pevec <alan.pevec@redhat.com> 1:5.0.1-1
 - Update to 5.0.1
 

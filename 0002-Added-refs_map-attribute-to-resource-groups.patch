@@ -1,0 +1,71 @@
+commit 1a9d430a8f9c65d43ab9aa2a14d78f57e89acda3
+Author:     Jay Dobies <jason.dobies@redhat.com>
+AuthorDate: Wed May 18 15:45:25 2016 -0400
+Commit:     Pierre Riteau <priteau@uchicago.edu>
+CommitDate: Tue Oct 18 20:59:43 2016 +0100
+
+    Added refs_map attribute to resource groups
+    
+    This attribute produces a map of resource name to ID, suitable for
+    passing into a SoftwareDeploymentGroup servers input.
+    
+    Change-Id: I9c9a2cd8f3f4c1fd50837c74bd49fc4dd4d06bcf
+    Partial-Bug: #1582837
+
+diff --git a/heat/engine/resources/openstack/heat/resource_group.py b/heat/engine/resources/openstack/heat/resource_group.py
+index f28dfe0..0246a0a 100644
+--- a/heat/engine/resources/openstack/heat/resource_group.py
++++ b/heat/engine/resources/openstack/heat/resource_group.py
+@@ -115,9 +115,9 @@ class ResourceGroup(stack_resource.StackResource):
+     )
+ 
+     ATTRIBUTES = (
+-        REFS, ATTR_ATTRIBUTES,
++        REFS, REFS_MAP, ATTR_ATTRIBUTES,
+     ) = (
+-        'refs', 'attributes',
++        'refs', 'refs_map', 'attributes',
+     )
+ 
+     properties_schema = {
+@@ -206,6 +206,12 @@ class ResourceGroup(stack_resource.StackResource):
+             _("A list of resource IDs for the resources in the group"),
+             type=attributes.Schema.LIST
+         ),
++        REFS_MAP: attributes.Schema(
++            _("A map of resource names to IDs for the resources in "
++              "the group."),
++            type=attributes.Schema.MAP,
++            support_status=support.SupportStatus(version='7.0.0'),
++        ),
+         ATTR_ATTRIBUTES: attributes.Schema(
+             _("A map of resource names to the specified attribute of each "
+               "individual resource.  "
+@@ -435,6 +441,10 @@ class ResourceGroup(stack_resource.StackResource):
+         if key == self.REFS:
+             vals = [grouputils.get_rsrc_id(self, key, False, n) for n in names]
+             return attributes.select_from_attribute(vals, path)
++        if key == self.REFS_MAP:
++            refs_map = {n: grouputils.get_rsrc_id(self, key, False, n)
++                        for n in names}
++            return refs_map
+         if key == self.ATTR_ATTRIBUTES:
+             if not path:
+                 raise exception.InvalidTemplateAttribute(
+diff --git a/heat/tests/test_resource_group.py b/heat/tests/test_resource_group.py
+index c984903..ccd8b65 100644
+--- a/heat/tests/test_resource_group.py
++++ b/heat/tests/test_resource_group.py
+@@ -736,6 +736,12 @@ class ResourceGroupAttrTest(common.HeatTestCase):
+         self.assertEqual(expected[1], resg.FnGetAtt("refs", 1))
+         self.assertIsNone(resg.FnGetAtt("refs", 2))
+ 
++    def test_aggregate_refs_map(self):
++        resg = self._create_dummy_stack()
++        found = resg.FnGetAtt("refs_map")
++        expected = {'0': 'ID-0', '1': 'ID-1'}
++        self.assertEqual(expected, found)
++
+     def test_aggregate_outputs(self):
+         """
+         Test outputs aggregation
