@@ -7,7 +7,7 @@ Summary:	OpenStack Orchestration (heat)
 # https://review.openstack.org/#/q/I6a35fa0dda798fad93b804d00a46af80f08d475c,n,z
 Epoch:		1
 Version:	8.0.6
-Release:	1%{?dist}
+Release:	1.1%{?dist}
 License:	ASL 2.0
 URL:		http://www.openstack.org
 Source0:	https://tarballs.openstack.org/heat/heat-%{upstream_version}.tar.gz
@@ -22,6 +22,9 @@ Source5:	openstack-heat-api-cloudwatch.service
 Source6:	openstack-heat-all.service
 
 Source20:	heat-dist.conf
+
+Patch0001:	0001-Add-Blazar-custom-constraint-plugin.patch
+Patch0002:	0002-Allow-to-specify-a-different-region-for-the-domain-a.patch
 
 BuildArch: noarch
 BuildRequires: git
@@ -127,6 +130,9 @@ This package contains the Heat test files.
 
 %prep
 %setup -q -n heat-%{upstream_version}
+
+%patch0001 -p1
+%patch0002 -p1
 
 # Remove the requirements file so that pbr hooks don't add it
 # to distutils requires_dist config
@@ -510,6 +516,9 @@ running the Heat service in general.
 
 
 %changelog
+* Mon Jun 18 2018 Pierre Riteau <priteau@uchicago.edu> 1:8.0.6-1.1
+- Add Chameleon patches
+
 * Tue Dec 12 2017 RDO <dev@lists.rdoproject.org> 1:8.0.6-1
 - Update to 8.0.6
 
