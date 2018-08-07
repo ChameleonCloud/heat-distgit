@@ -1,0 +1,162 @@
+diff --git a/heat/engine/resources/server_base.py b/heat/engine/resources/server_base.py
+index cd0097ec8..6c3580b24 100644
+--- a/heat/engine/resources/server_base.py
++++ b/heat/engine/resources/server_base.py
+@@ -51,6 +51,8 @@ class BaseServer(stack_user.StackUser):
+         occ = meta['os-collect-config']
+         collectors = list(self.default_collectors)
+         occ['collectors'] = collectors
++        region_name = (self.context.region_name or
++                       cfg.CONF.region_name_for_services)
+ 
+         # set existing values to None to override any boot-time config
+         occ_keys = ('heat', 'zaqar', 'cfn', 'request')
+@@ -68,7 +70,8 @@ class BaseServer(stack_user.StackUser):
+                 'auth_url': self.context.auth_url,
+                 'project_id': self.stack.stack_user_project_id,
+                 'stack_id': self.stack.identifier().stack_path(),
+-                'resource_name': self.name}})
++                'resource_name': self.name,
++                'region_name': region_name}})
+             collectors.append('heat')
+ 
+         elif self.transport_zaqar_message(props):
+@@ -79,7 +82,8 @@ class BaseServer(stack_user.StackUser):
+                 'password': self.password,
+                 'auth_url': self.context.auth_url,
+                 'project_id': self.stack.stack_user_project_id,
+-                'queue_id': queue_id}})
++                'queue_id': queue_id,
++                'region_name': region_name}})
+             collectors.append('zaqar')
+ 
+         elif self.transport_poll_server_cfn(props):
+diff --git a/heat/tests/openstack/heat/test_deployed_server.py b/heat/tests/openstack/heat/test_deployed_server.py
+index 58c625156..2889db726 100644
+--- a/heat/tests/openstack/heat/test_deployed_server.py
++++ b/heat/tests/openstack/heat/test_deployed_server.py
+@@ -78,7 +78,8 @@ class DeployedServersTest(common.HeatTestCase):
+     def _setup_test_stack(self, stack_name, test_templ=ds_tmpl):
+         t = template_format.parse(test_templ)
+         tmpl = template.Template(t, env=environment.Environment())
+-        stack = parser.Stack(utils.dummy_context(), stack_name, tmpl,
++        stack = parser.Stack(utils.dummy_context(region_name="RegionOne"),
++                             stack_name, tmpl,
+                              stack_id=uuidutils.generate_uuid(),
+                              stack_user_project_id='8888')
+         return (tmpl, stack)
+@@ -246,6 +247,7 @@ class DeployedServersTest(common.HeatTestCase):
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'password': server.password,
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'resource_name': 'server',
+                     'stack_id': 'server_heat_s/%s' % stack.id,
+                     'user_id': '1234'
+@@ -277,6 +279,7 @@ class DeployedServersTest(common.HeatTestCase):
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'password': server.password,
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'resource_name': 'server',
+                     'stack_id': 'server_heat_s/%s' % stack.id,
+                     'user_id': '1234'
+@@ -336,6 +339,7 @@ class DeployedServersTest(common.HeatTestCase):
+                     'password': server.password,
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'queue_id': queue_id
+                 },
+                 'collectors': ['zaqar', 'local']
+@@ -353,6 +357,7 @@ class DeployedServersTest(common.HeatTestCase):
+                     'password': server.password,
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'queue_id': queue_id
+                 },
+                 'collectors': ['zaqar', 'local'],
+diff --git a/heat/tests/openstack/nova/test_server.py b/heat/tests/openstack/nova/test_server.py
+index b6c08daee..91ec44411 100644
+--- a/heat/tests/openstack/nova/test_server.py
++++ b/heat/tests/openstack/nova/test_server.py
+@@ -257,7 +257,8 @@ class ServersTest(common.HeatTestCase):
+         templ = template.Template(t,
+                                   env=environment.Environment(
+                                       {'key_name': 'test'}))
+-        stack = parser.Stack(utils.dummy_context(), stack_name, templ,
++        stack = parser.Stack(utils.dummy_context(region_name="RegionOne"),
++                             stack_name, templ,
+                              stack_id=uuidutils.generate_uuid(),
+                              stack_user_project_id='8888')
+         return templ, stack
+@@ -808,6 +809,7 @@ class ServersTest(common.HeatTestCase):
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'password': server.password,
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'resource_name': 'WebServer',
+                     'stack_id': 'software_config_s/%s' % stack.id,
+                     'user_id': '1234'
+@@ -827,6 +829,7 @@ class ServersTest(common.HeatTestCase):
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'password': server.password,
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'resource_name': 'WebServer',
+                     'stack_id': 'software_config_s/%s' % stack.id,
+                     'user_id': '1234'
+@@ -972,7 +975,8 @@ class ServersTest(common.HeatTestCase):
+                     'password': server.password,
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'project_id': '8888',
+-                    'queue_id': queue_id
++                    'queue_id': queue_id,
++                    'region_name': 'RegionOne',
+                 },
+                 'collectors': ['ec2', 'zaqar', 'local']
+             },
+@@ -989,7 +993,8 @@ class ServersTest(common.HeatTestCase):
+                     'password': server.password,
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'project_id': '8888',
+-                    'queue_id': queue_id
++                    'queue_id': queue_id,
++                    'region_name': 'RegionOne',
+                 },
+                 'collectors': ['ec2', 'zaqar', 'local'],
+                 'polling_interval': 10
+@@ -1671,7 +1676,7 @@ class ServersTest(common.HeatTestCase):
+                     'metadata_url': None,
+                     'path': None,
+                     'secret_access_key': None,
+-                    'stack_name': None
++                    'stack_name': None,
+                 },
+                 'request': {
+                     'metadata_url': 'the_url',
+@@ -1692,6 +1697,7 @@ class ServersTest(common.HeatTestCase):
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'password': password,
+                     'project_id': '8888',
++                    'region_name': 'RegionOne',
+                     'resource_name': 'WebServer',
+                     'stack_id': 'software_config_s/%s' % stack.id,
+                     'user_id': '1234'
+@@ -1724,12 +1730,14 @@ class ServersTest(common.HeatTestCase):
+                     'password': password_1,
+                     'auth_url': 'http://server.test:5000/v2.0',
+                     'project_id': '8888',
+-                    'queue_id': server.data().get('metadata_queue_id')
++                    'queue_id': server.data().get('metadata_queue_id'),
++                    'region_name': 'RegionOne',
+                 },
+                 'heat': {
+                     'auth_url': None,
+                     'password': None,
+                     'project_id': None,
++                    'region_name': None,
+                     'resource_name': None,
+                     'stack_id': None,
+                     'user_id': None
