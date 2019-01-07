@@ -27,7 +27,7 @@ Patch0001:	0001-Add-Blazar-custom-constraint-plugin.patch
 Patch0002:	0002-Allow-to-specify-a-different-region-for-the-domain-a.patch
 Patch0003:	0003-Support-region_name-for-software-deployment.patch
 Patch0004:	0004-Fix-multi-region-issue-for-software-deployment.patch
-Patch0005:	0005-Add-initialize-stack-action.patch
+Patch0005:	0005-Added-initialization-stack-action.patch
 
 BuildArch: noarch
 BuildRequires: git
