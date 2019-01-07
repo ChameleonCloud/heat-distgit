@@ -1,0 +1,130 @@
+From d14e8f0032edc6d399baeb7a298b1a5f9bb42400 Mon Sep 17 00:00:00 2001
+From: jakecoll <jakecoll@uchicago.edu>
+Date: Mon, 7 Jan 2019 09:51:42 -0600
+Subject: [PATCH 5/5] Added initialization stack action
+
+---
+ heat/api/openstack/v1/stacks.py | 4 ++--
+ heat/engine/api.py              | 5 +++++
+ heat/engine/service.py          | 9 +++++++++
+ heat/engine/stack.py            | 7 ++++---
+ heat/rpc/api.py                 | 4 ++--
+ 5 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/heat/api/openstack/v1/stacks.py b/heat/api/openstack/v1/stacks.py
+index 975db80..452f713 100644
+--- a/heat/api/openstack/v1/stacks.py
++++ b/heat/api/openstack/v1/stacks.py
+@@ -50,7 +50,7 @@ class InstantiationData(object):
+         PARAM_USER_PARAMS,
+         PARAM_ENVIRONMENT,
+         PARAM_FILES,
+-        PARAM_ENVIRONMENT_FILES,
++        PARAM_ENVIRONMENT_FILES
+     ) = (
+         'stack_name',
+         'template',
+@@ -58,7 +58,7 @@ class InstantiationData(object):
+         'parameters',
+         'environment',
+         'files',
+-        'environment_files',
++        'environment_files'
+     )
+ 
+     def __init__(self, data, patch=False):
+diff --git a/heat/engine/api.py b/heat/engine/api.py
+index cdbf215..5ecf7c0 100644
+--- a/heat/engine/api.py
++++ b/heat/engine/api.py
+@@ -53,6 +53,11 @@ def extract_args(params):
+         disable_rollback = param_utils.extract_bool(name, params[name])
+         kwargs[name] = disable_rollback
+ 
++    name = rpc_api.PARAM_INITIALIZE
++    if name in params:
++        initialize = param_utils.extract_bool(name, params[name])
++        kwargs[name] = initialize
++
+     name = rpc_api.PARAM_SHOW_DELETED
+     if name in params:
+         params[name] = param_utils.extract_bool(name, params[name])
+diff --git a/heat/engine/service.py b/heat/engine/service.py
+index 8d3bd20..b92d323 100644
+--- a/heat/engine/service.py
++++ b/heat/engine/service.py
+@@ -812,7 +812,16 @@ class EngineService(service.ServiceBase):
+             stack_user_project_id, convergence, parent_resource_name,
+             template_id)
+ 
++        # Return without allocating resources if stack set to initialize
++        if stack.initialize:
++            stack.action = stack.INIT
++            stack.status = stack.COMPLETE
++            stack.store()
++            _create_stack_user(stack)
++            return dict(stack.identifier())
++
+         stack_id = stack.store()
++
+         if cfg.CONF.reauthentication_auth_method == 'trusts':
+             stack = parser.Stack.load(
+                 cnxt, stack_id=stack_id, use_stored_context=True)
+diff --git a/heat/engine/stack.py b/heat/engine/stack.py
+index d675847..b8e22ee 100644
+--- a/heat/engine/stack.py
++++ b/heat/engine/stack.py
+@@ -104,10 +104,10 @@ class Stack(collections.Mapping):
+ 
+     ACTIONS = (
+         CREATE, DELETE, UPDATE, ROLLBACK, SUSPEND, RESUME, ADOPT,
+-        SNAPSHOT, CHECK, RESTORE
++        SNAPSHOT, CHECK, RESTORE, INIT
+     ) = (
+         'CREATE', 'DELETE', 'UPDATE', 'ROLLBACK', 'SUSPEND', 'RESUME', 'ADOPT',
+-        'SNAPSHOT', 'CHECK', 'RESTORE'
++        'SNAPSHOT', 'CHECK', 'RESTORE', 'INIT'
+     )
+ 
+     STATUSES = (IN_PROGRESS, FAILED, COMPLETE
+@@ -120,7 +120,7 @@ class Stack(collections.Mapping):
+                  status_reason='', timeout_mins=None,
+                  disable_rollback=True, parent_resource=None, owner_id=None,
+                  adopt_stack_data=None, stack_user_project_id=None,
+-                 created_time=None, updated_time=None,
++                 created_time=None, updated_time=None, initialize=False,
+                  user_creds_id=None, tenant_id=None,
+                  use_stored_context=False, username=None,
+                  nested_depth=0, strict_validate=True, convergence=False,
+@@ -165,6 +165,7 @@ class Stack(collections.Mapping):
+         self.status_reason = status_reason
+         self.timeout_mins = timeout_mins
+         self.disable_rollback = disable_rollback
++        self.initialize = initialize
+         self.parent_resource_name = parent_resource
+         self._parent_stack = None
+         self._outputs = None
+diff --git a/heat/rpc/api.py b/heat/rpc/api.py
+index d2d2dd4..27233e2 100644
+--- a/heat/rpc/api.py
++++ b/heat/rpc/api.py
+@@ -20,14 +20,14 @@ PARAM_KEYS = (
+     PARAM_CLEAR_PARAMETERS, PARAM_GLOBAL_TENANT, PARAM_LIMIT,
+     PARAM_NESTED_DEPTH, PARAM_TAGS, PARAM_SHOW_HIDDEN, PARAM_TAGS_ANY,
+     PARAM_NOT_TAGS, PARAM_NOT_TAGS_ANY, TEMPLATE_TYPE, PARAM_WITH_DETAIL,
+-    RESOLVE_OUTPUTS, PARAM_IGNORE_ERRORS
++    RESOLVE_OUTPUTS, PARAM_IGNORE_ERRORS, PARAM_INITIALIZE
+ ) = (
+     'timeout_mins', 'disable_rollback', 'adopt_stack_data',
+     'show_deleted', 'show_nested', 'existing',
+     'clear_parameters', 'global_tenant', 'limit',
+     'nested_depth', 'tags', 'show_hidden', 'tags_any',
+     'not_tags', 'not_tags_any', 'template_type', 'with_detail',
+-    'resolve_outputs', 'ignore_errors'
++    'resolve_outputs', 'ignore_errors', 'initialize'
+ )
+ 
+ STACK_KEYS = (
+-- 
+1.8.3.1
+
