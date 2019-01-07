@@ -7,7 +7,7 @@ Summary:	OpenStack Orchestration (heat)
 # https://review.openstack.org/#/q/I6a35fa0dda798fad93b804d00a46af80f08d475c,n,z
 Epoch:		1
 Version:	8.0.6
-Release:	1.2%{?dist}
+Release:	1.3%{?dist}
 License:	ASL 2.0
 URL:		http://www.openstack.org
 Source0:	https://tarballs.openstack.org/heat/heat-%{upstream_version}.tar.gz
@@ -27,6 +27,7 @@ Patch0001:	0001-Add-Blazar-custom-constraint-plugin.patch
 Patch0002:	0002-Allow-to-specify-a-different-region-for-the-domain-a.patch
 Patch0003:	0003-Support-region_name-for-software-deployment.patch
 Patch0004:	0004-Fix-multi-region-issue-for-software-deployment.patch
+Patch0005:	0005-Add-initialize-stack-action.patch
 
 BuildArch: noarch
 BuildRequires: git
@@ -137,6 +138,7 @@ This package contains the Heat test files.
 %patch0002 -p1
 %patch0003 -p1
 %patch0004 -p1
+%patch0005 -p1
 
 # Remove the requirements file so that pbr hooks don't add it
 # to distutils requires_dist config
@@ -520,6 +522,9 @@ running the Heat service in general.
 
 
 %changelog
+* Mon Jan 07 2019 Jacob Colleran <jakecoll@uchicago.edu> 1:8.0.6-1.3
+- Add initailize stack action
+
 * Tue Aug 07 2018 Jason Anderson <jasonanderson@uchicago.edu> 1:8.0.6-1.2
 - Add Chameleon patches for multi-region deployment issue
 
